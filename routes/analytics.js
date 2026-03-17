@@ -1,9 +1,14 @@
 const express = require("express");
-const redis = require("../redis/redisClient");
+const redisClient = require("../redis/redisClient");
 
 const router = express.Router();
 
 router.get("/", async (req, res) => {
+
+  const userId = req.headers["user-id"] || "analytics";
+
+  const redis = redisClient.getClient(userId);
+
   try {
     const totalRequests = await redis.get("metrics:total_requests");
     const blockedRequests = await redis.get("metrics:blocked_requests");

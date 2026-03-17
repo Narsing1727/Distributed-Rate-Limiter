@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const redis = require("../redis/redisClient");
+const { getRedisClient } = require("../redis/redisCluster"); 
 
 const script = fs.readFileSync(
   path.join(__dirname, "../lua/tokenBucket.lua"),
@@ -8,6 +8,8 @@ const script = fs.readFileSync(
 );
 
 async function luaLimiter(key, capacity = 10) {
+
+  const redis = getRedisClient(key); 
 
   const now = Date.now();
 

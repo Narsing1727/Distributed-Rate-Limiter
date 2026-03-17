@@ -1,6 +1,10 @@
-const redis = require("./redisClient");
+const redisClient = require("./redisClient");
 
 async function test() {
+
+  const userId = "testUser";
+
+  const redis = redisClient.getClient(userId);
 
   await redis.set("testKey", "hello");
 

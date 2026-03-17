@@ -1,31 +1,42 @@
 const luaLimiter = require("../algorithms/luaLimiter");
 const localLimiter = require("../algorithms/localLimiter");
 const { getUserLimit } = require("../config/limitService");
-const redis = require("../redis/redisClient");
+const { getRedisClient } = require("../redis/redisCluster");
 const { totalRequests, blockedRequests, allowedRequests } = require("../metrics/metrics");
+const { sendEvent } = require("../kafka/producer");
 
 async function rateLimiter(req, res, next) {
 
   const userPlan = req.headers["x-plan"] || "free";
   const limit = await getUserLimit(userPlan);
 
-  const key = `rate:user:${req.ip}`;
+  const userId = req.headers["user-id"] || req.ip;
+  const key = `rate:user:${userId}`;
 
   let allowed;
 
-  // Prometheus metric
   totalRequests.inc();
 
   try {
 
+    // ✅ Lua limiter (uses cluster internally)
     allowed = await luaLimiter(key, limit);
 
-   const pipeline = redis.pipeline();
+    // ✅ IMPORTANT: get redis client
+    const redis = getRedisClient(key);
 
-pipeline.incr("metrics:total_requests");
-pipeline.zincrby("metrics:user_requests",1,req.ip);
+    const pipeline = redis.pipeline();
 
-await pipeline.exec();
+    await sendEvent({
+      userId,
+      status: "allowed",
+      timestamp: Date.now()
+    });
+
+    pipeline.incr("metrics:total_requests");
+    pipeline.zincrby("metrics:user_requests", 1, userId);
+
+    await pipeline.exec();
 
   } catch (err) {
 
@@ -40,9 +51,20 @@ await pipeline.exec();
     blockedRequests.inc();
 
     try {
-   const pipeline = redis.pipeline();
-pipeline.incr("metrics:blocked_requests");
-await pipeline.exec();
+
+      const redis = getRedisClient(key); // ✅ FIX
+      const pipeline = redis.pipeline();
+
+      await sendEvent({
+        userId,
+        status: "blocked",
+        timestamp: Date.now()
+      });
+
+      pipeline.incr("metrics:blocked_requests");
+
+      await pipeline.exec();
+
     } catch {}
 
     res.setHeader("Retry-After", 60);

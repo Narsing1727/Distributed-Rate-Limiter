@@ -1,16 +1,16 @@
-const redis = require("../redis/redisClient");
+const redisClient = require("../redis/redisClient");
 
-async function getUserLimit(plan) {
+async function getUserLimit(userId, plan) {
+
+  const redis = redisClient.getClient(userId);
 
   try {
-
     const limit = await redis.hget("rate_limit:config", plan);
-
     return limit ? parseInt(limit) : 10;
 
   } catch (err) {
 
-    console.log("Redis config unavailable → using default limit");
+    console.log("Redis config unavailable → using default");
 
     const defaults = {
       free: 10,

@@ -1,18 +1,8 @@
-const Redis = require("ioredis");
+const { getRedisClient } = require("./redisCluster");
 
-const redisHost = process.env.REDIS_HOST || "127.0.0.1";
-
-const redis = new Redis({
-  host: redisHost,
-  port: 6379
-});
-
-redis.on("connect", () => {
-  console.log("✅ Redis connected");
-});
-
-redis.on("error", (err) => {
-  console.log("Redis error:", err.message);
-});
-
-module.exports = redis;
+// 🔥 wrapper to keep old code working
+module.exports = {
+  getClient: (key = "default") => {
+    return getRedisClient(key);
+  }
+};
