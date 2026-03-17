@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.*
+
+# logs
+logs/
+*.log
+
+# build
+dist/
+build/
+coverage/
+
+# OS files
+.DS_Store
+
+# editor
+.vscode/
+
+# redis data
+*.rdb
+*.aof
+
+# temp
+tmp/
+temp/
